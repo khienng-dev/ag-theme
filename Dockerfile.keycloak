@@ -1,0 +1,15 @@
+# Custom Keycloak with ag-theme baked in
+FROM quay.io/keycloak/keycloak:26.2
+
+# Copy theme directories directly into the theme location
+COPY ag-theme/login/    /opt/keycloak/themes/ag-theme/login/
+COPY ag-theme/account/  /opt/keycloak/themes/ag-theme/account/
+COPY ag-theme/admin/    /opt/keycloak/themes/ag-theme/admin/
+COPY ag-theme/common/   /opt/keycloak/themes/ag-theme/common/
+COPY META-INF/          /opt/keycloak/themes/ag-theme/META-INF/
+COPY theme-settings.json /opt/keycloak/themes/ag-theme/theme-settings.json
+
+# Copy realm import
+COPY realm-export.json /opt/keycloak/data/import/realm-export.json
+
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh"]
