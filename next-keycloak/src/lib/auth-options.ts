@@ -1,51 +1,105 @@
 import type { AuthOptions } from "next-auth";
+import type { JWT } from "next-auth/jwt";
 import KeycloakProvider from "next-auth/providers/keycloak";
+
+const EXCLUDED_ROLES = [
+  "offline_access",
+  "uma_authorization",
+  "default-roles-ag-ecommerce",
+];
+
+interface KeycloakProfile {
+  realm_access?: { roles: string[] };
+  given_name?: string;
+  family_name?: string;
+  preferred_username?: string;
+}
+
+async function refreshAccessToken(token: JWT): Promise<JWT> {
+  try {
+    const response = await fetch(
+      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          grant_type: "refresh_token",
+          client_id: process.env.KEYCLOAK_CLIENT_ID!,
+          client_secret: process.env.KEYCLOAK_CLIENT_SECRET!,
+          refresh_token: token.refreshToken ?? "",
+        }),
+      }
+    );
+
+    if (!response.ok) throw new Error("Failed to refresh token");
+
+    const refreshed = await response.json();
+
+    return {
+      ...token,
+      accessToken: refreshed.access_token,
+      refreshToken: refreshed.refresh_token ?? token.refreshToken,
+      idToken: refreshed.id_token,
+      expiresAt: Math.floor(Date.now() / 1000) + refreshed.expires_in,
+    };
+  } catch {
+    return { ...token, error: "RefreshAccessTokenError" };
+  }
+}
 
 export const authOptions: AuthOptions = {
   providers: [
     KeycloakProvider({
       clientId: process.env.KEYCLOAK_CLIENT_ID!,
-      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET || "placeholder",
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
       issuer: process.env.KEYCLOAK_ISSUER!,
     }),
   ],
   callbacks: {
     async jwt({ token, account, profile }) {
-      if (account) {
-        token.accessToken = account.access_token;
-        token.refreshToken = account.refresh_token;
-        token.idToken = account.id_token;
-        token.expiresAt = account.expires_at;
-        token.roles =
-          (profile as Record<string, unknown>)?.realm_access !== undefined
-            ? (
-                (profile as Record<string, unknown>).realm_access as {
-                  roles: string[];
-                }
-              ).roles?.filter(
-                (r: string) =>
-                  ![
-                    "offline_access",
-                    "uma_authorization",
-                    "default-roles-ag-ecommerce",
-                  ].includes(r)
-              )
-            : [];
+      // Lần đầu login
+      if (account && profile) {
+        const keycloakProfile = profile as KeycloakProfile;
+        return {
+          ...token,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          idToken: account.id_token,
+          expiresAt: account.expires_at,
+          preferred_username: keycloakProfile.preferred_username,
+          given_name: keycloakProfile.given_name,
+          family_name: keycloakProfile.family_name,
+          roles:
+            keycloakProfile.realm_access?.roles.filter(
+              (r) => !EXCLUDED_ROLES.includes(r)
+            ) ?? [],
+        };
       }
-      return token;
+
+      // Token còn hạn
+      if (Date.now() < (token.expiresAt ?? 0) * 1000) {
+        return token;
+      }
+
+      // Token hết hạn → refresh
+      return refreshAccessToken(token);
     },
+
     async session({ session, token }) {
-      (session as any).accessToken = token.accessToken as string;
-      (session as any).refreshToken = token.refreshToken as string;
-      (session as any).idToken = token.idToken as string;
-      (session as any).roles = (token.roles as string[]) ?? [];
+      session.accessToken = token.accessToken ?? "";
+      session.refreshToken = token.refreshToken ?? "";
+      session.idToken = token.idToken ?? "";
+      session.roles = token.roles ?? [];
+      session.username = token.preferred_username ?? "";
+      session.firstName = token.given_name ?? "";
+      session.lastName = token.family_name ?? "";
       session.user = {
         ...session.user,
         name:
-          (token.name as string) ??
-          `${(token as any).given_name ?? ""} ${(token as any).family_name ?? ""}`.trim(),
-        email: token.email as string,
-        image: token.picture as string,
+          token.name ??
+          `${token.given_name ?? ""} ${token.family_name ?? ""}`.trim(),
+        email: token.email ?? "",
+        image: token.picture ?? "",
       };
       return session;
     },

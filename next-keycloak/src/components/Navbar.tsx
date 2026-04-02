@@ -8,10 +8,13 @@ export default function Navbar() {
   const authenticated = status === "authenticated";
 
   const handleLogout = async () => {
-    // 1. Clear NextAuth session
+    // 1. Get Keycloak logout URL while session is still active (has idToken)
+    const res = await fetch("/api/logout");
+    const { url } = await res.json();
+    // 2. Clear NextAuth session
     await signOut({ redirect: false });
-    // 2. Redirect to Keycloak logout to kill SSO session
-    window.location.href = "/api/logout";
+    // 3. Redirect to Keycloak logout (kills SSO session)
+    window.location.href = url;
   };
 
   return (

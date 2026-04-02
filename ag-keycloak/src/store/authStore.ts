@@ -17,7 +17,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     initPromise = (async () => {
       try {
         const auth = await keycloak.init({
-          onLoad: "login-required",
+          onLoad: "check-sso",
+          silentCheckSsoRedirectUri:
+            window.location.origin + "/silent-check-sso.html",
           checkLoginIframe: false,
         });
 

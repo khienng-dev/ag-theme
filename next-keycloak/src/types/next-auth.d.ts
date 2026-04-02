@@ -6,6 +6,9 @@ declare module "next-auth" {
     refreshToken?: string;
     idToken?: string;
     roles?: string[];
+    username?: string;
+    firstName?: string;
+    lastName?: string;
   }
 }
 
@@ -18,5 +21,6 @@ declare module "next-auth/jwt" {
     roles?: string[];
     given_name?: string;
     family_name?: string;
+    preferred_username?: string;
   }
 }

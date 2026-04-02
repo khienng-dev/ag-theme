@@ -248,18 +248,20 @@ export default function Profile() {
   if (status !== "authenticated" || !session) return null;
 
   const user = session.user;
-  const nameParts = (user.name || "").split(" ");
-  const firstName = nameParts[0] || "";
-  const lastName = nameParts.slice(1).join(" ") || "";
+  const firstName = session.firstName || "";
+  const lastName = session.lastName || "";
+  const username = session.username || "";
 
   const infoItems = [
-    { label: "Name", value: user.name, icon: <User size={14} /> },
-    { label: "Email", value: user.email, icon: <Mail size={14} /> },
+    { label: "Username", value: username, icon: <User size={14} /> },
+    { label: "Email", value: user?.email, icon: <Mail size={14} /> },
+    { label: "First Name", value: firstName, icon: <FileText size={14} /> },
+    { label: "Last Name", value: lastName, icon: <FileText size={14} /> },
   ];
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-  const displayName = user.name || "User";
+  const displayName = user?.name || username || "User";
 
   const tokenMap: Record<TokenType, string | undefined> = {
     access: session.accessToken,
@@ -273,7 +275,7 @@ export default function Profile() {
         {/* Profile Card */}
         <div className="border border-gray-200 rounded-lg p-5">
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-            {user.image ? (
+            {user?.image ? (
               <img
                 src={user.image}
                 alt={displayName}
@@ -287,7 +289,7 @@ export default function Profile() {
             )}
             <div>
               <p className="font-medium text-sm">{displayName}</p>
-              <p className="text-xs text-gray-400">{user.email}</p>
+              <p className="text-xs text-gray-400">{user?.email}</p>
             </div>
           </div>
 
