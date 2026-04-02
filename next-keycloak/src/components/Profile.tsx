@@ -1,5 +1,7 @@
+"use client";
+
 import { useState, useEffect } from "react";
-import { useAuthStore } from "../store/authStore";
+import { useSession } from "next-auth/react";
 import {
   User,
   Mail,
@@ -11,7 +13,6 @@ import {
   ExternalLink,
   Eye,
 } from "lucide-react";
-import keycloak from "../keycloak";
 
 type TokenType = "access" | "refresh" | "id";
 
@@ -39,6 +40,7 @@ function TokenModal({
     const onEsc = (e: KeyboardEvent) => e.key === "Escape" && handleClose();
     document.addEventListener("keydown", onEsc);
     return () => document.removeEventListener("keydown", onEsc);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleClose = () => {
@@ -67,7 +69,9 @@ function TokenModal({
         onClick={(e) => e.stopPropagation()}
         style={{
           opacity: visible ? 1 : 0,
-          transform: visible ? "scale(1) translateY(0)" : "scale(0.97) translateY(8px)",
+          transform: visible
+            ? "scale(1) translateY(0)"
+            : "scale(0.97) translateY(8px)",
           transition: "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
           maxWidth: "600px",
           width: "100%",
@@ -92,13 +96,24 @@ function TokenModal({
               justifyContent: "space-between",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div
+              style={{ display: "flex", alignItems: "center", gap: "10px" }}
+            >
               <Key size={16} color="#6b7280" />
               <div>
-                <h3 style={{ fontWeight: 600, fontSize: "14px", color: "#111827", margin: 0 }}>
+                <h3
+                  style={{
+                    fontWeight: 600,
+                    fontSize: "14px",
+                    color: "#111827",
+                    margin: 0,
+                  }}
+                >
                   {meta.label}
                 </h3>
-                <p style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}>
+                <p
+                  style={{ fontSize: "12px", color: "#9ca3af", margin: 0 }}
+                >
                   {token ? `${token.length} characters` : "Not available"}
                 </p>
               </div>
@@ -117,8 +132,12 @@ function TokenModal({
                 cursor: "pointer",
                 transition: "background-color 0.15s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f9fafb")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#f9fafb")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "transparent")
+              }
             >
               <X size={14} color="#6b7280" />
             </button>
@@ -177,8 +196,12 @@ function TokenModal({
                 color: "#374151",
                 transition: "all 0.15s",
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f9fafb")}
-              onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#fff")}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = "#f9fafb")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = "#fff")
+              }
             >
               Close
             </button>
@@ -200,10 +223,12 @@ function TokenModal({
                 transition: "all 0.15s",
               }}
               onMouseEnter={(e) => {
-                if (token && !copied) e.currentTarget.style.backgroundColor = "#1f2937";
+                if (token && !copied)
+                  e.currentTarget.style.backgroundColor = "#1f2937";
               }}
               onMouseLeave={(e) => {
-                if (!copied) e.currentTarget.style.backgroundColor = "#111827";
+                if (!copied)
+                  e.currentTarget.style.backgroundColor = "#111827";
               }}
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -217,26 +242,29 @@ function TokenModal({
 }
 
 export default function Profile() {
-  const { authenticated, userProfile } = useAuthStore();
+  const { data: session, status } = useSession();
   const [activeToken, setActiveToken] = useState<TokenType | null>(null);
 
-  if (!authenticated || !userProfile) return null;
+  if (status !== "authenticated" || !session) return null;
+
+  const user = session.user;
+  const nameParts = (user.name || "").split(" ");
+  const firstName = nameParts[0] || "";
+  const lastName = nameParts.slice(1).join(" ") || "";
 
   const infoItems = [
-    { label: "Username", value: userProfile.username, icon: <User size={14} /> },
-    { label: "Email", value: userProfile.email, icon: <Mail size={14} /> },
-    { label: "First Name", value: userProfile.firstName, icon: <FileText size={14} /> },
-    { label: "Last Name", value: userProfile.lastName, icon: <FileText size={14} /> },
+    { label: "Name", value: user.name, icon: <User size={14} /> },
+    { label: "Email", value: user.email, icon: <Mail size={14} /> },
   ];
 
-  const displayName = [userProfile.firstName, userProfile.lastName]
-    .filter(Boolean)
-    .join(" ");
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  const displayName = user.name || "User";
 
   const tokenMap: Record<TokenType, string | undefined> = {
-    access: keycloak.token,
-    refresh: keycloak.refreshToken,
-    id: keycloak.idToken,
+    access: session.accessToken,
+    refresh: session.refreshToken,
+    id: session.idToken,
   };
 
   return (
@@ -245,21 +273,21 @@ export default function Profile() {
         {/* Profile Card */}
         <div className="border border-gray-200 rounded-lg p-5">
           <div className="flex items-center gap-3 mb-4 pb-4 border-b border-gray-100">
-            {userProfile.picture ? (
+            {user.image ? (
               <img
-                src={userProfile.picture}
+                src={user.image}
                 alt={displayName}
                 className="w-12 h-12 rounded-full object-cover"
               />
             ) : (
               <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium text-sm">
-                {userProfile.firstName?.[0]}
-                {userProfile.lastName?.[0]}
+                {firstName?.[0]}
+                {lastName?.[0]}
               </div>
             )}
             <div>
               <p className="font-medium text-sm">{displayName}</p>
-              <p className="text-xs text-gray-400">{userProfile.email}</p>
+              <p className="text-xs text-gray-400">{user.email}</p>
             </div>
           </div>
 
@@ -270,7 +298,9 @@ export default function Profile() {
                 className="flex items-center gap-2 py-2 border-b border-gray-100 last:border-b-0 text-sm"
               >
                 <span className="text-gray-400 shrink-0">{item.icon}</span>
-                <span className="text-gray-400 w-24 shrink-0 text-xs">{item.label}</span>
+                <span className="text-gray-400 w-24 shrink-0 text-xs">
+                  {item.label}
+                </span>
                 <span className="font-medium">{item.value || "N/A"}</span>
               </div>
             ))}
@@ -285,88 +315,107 @@ export default function Profile() {
           </h3>
 
           <div className="flex flex-col gap-2">
-            {(Object.entries(TOKEN_META) as [TokenType, typeof TOKEN_META.access][]).map(
-              ([type, meta]) => (
-                <button
-                  key={type}
-                  onClick={() => setActiveToken(type)}
+            {(
+              Object.entries(TOKEN_META) as [
+                TokenType,
+                (typeof TOKEN_META)["access"],
+              ][]
+            ).map(([type, meta]) => (
+              <button
+                key={type}
+                onClick={() => setActiveToken(type)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "12px 16px",
+                  borderRadius: "8px",
+                  border: "1px solid #e5e7eb",
+                  backgroundColor: "#fff",
+                  cursor: "pointer",
+                  transition: "all 0.15s ease",
+                  textAlign: "left",
+                  width: "100%",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#f9fafb";
+                  e.currentTarget.style.borderColor = "#d1d5db";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#fff";
+                  e.currentTarget.style.borderColor = "#e5e7eb";
+                }}
+              >
+                <div
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "12px 16px",
-                    borderRadius: "8px",
-                    border: "1px solid #e5e7eb",
-                    backgroundColor: "#fff",
-                    cursor: "pointer",
-                    transition: "all 0.15s ease",
-                    textAlign: "left",
-                    width: "100%",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = "#f9fafb";
-                    e.currentTarget.style.borderColor = "#d1d5db";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "#fff";
-                    e.currentTarget.style.borderColor = "#e5e7eb";
+                    gap: "10px",
                   }}
                 >
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <Key size={14} color="#9ca3af" />
-                    <div>
-                      <p style={{ fontWeight: 500, fontSize: "13px", color: "#111827", margin: 0 }}>
-                        {meta.label}
-                      </p>
-                      <p
-                        style={{
-                          fontSize: "11px",
-                          color: "#9ca3af",
-                          margin: "1px 0 0",
-                          fontFamily: "monospace",
-                        }}
-                      >
-                        {tokenMap[type]
-                          ? `${tokenMap[type]!.slice(0, 36)}...`
-                          : "Not available"}
-                      </p>
-                    </div>
+                  <Key size={14} color="#9ca3af" />
+                  <div>
+                    <p
+                      style={{
+                        fontWeight: 500,
+                        fontSize: "13px",
+                        color: "#111827",
+                        margin: 0,
+                      }}
+                    >
+                      {meta.label}
+                    </p>
+                    <p
+                      style={{
+                        fontSize: "11px",
+                        color: "#9ca3af",
+                        margin: "1px 0 0",
+                        fontFamily: "monospace",
+                      }}
+                    >
+                      {tokenMap[type]
+                        ? `${tokenMap[type]!.slice(0, 36)}...`
+                        : "Not available"}
+                    </p>
                   </div>
-                  <Eye size={14} color="#9ca3af" />
-                </button>
-              )
-            )}
+                </div>
+                <Eye size={14} color="#9ca3af" />
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Redirect Button */}
-        <a
-          href={import.meta.env.VITE_APP_URL || "http://localhost:3000"}
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "8px",
-            padding: "10px 20px",
-            borderRadius: "8px",
-            backgroundColor: "#111827",
-            color: "#fff",
-            fontSize: "13px",
-            fontWeight: 500,
-            textDecoration: "none",
-            cursor: "pointer",
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = "#1f2937";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = "#111827";
-          }}
-        >
-          <ExternalLink size={14} />
-          Go to App
-        </a>
+        {/* Redirect Buttons */}
+        <div className="flex gap-3">
+          <a
+            href={appUrl}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: "8px",
+              padding: "10px 20px",
+              borderRadius: "8px",
+              backgroundColor: "#111827",
+              color: "#fff",
+              fontSize: "13px",
+              fontWeight: 500,
+              textDecoration: "none",
+              cursor: "pointer",
+              transition: "all 0.15s ease",
+              flex: 1,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.backgroundColor = "#1f2937";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.backgroundColor = "#111827";
+            }}
+          >
+            <ExternalLink size={14} />
+            Go to App
+          </a>
+        </div>
       </section>
 
       {/* Token Modal */}
