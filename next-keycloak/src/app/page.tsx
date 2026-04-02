@@ -1,14 +1,15 @@
-import { auth } from "@/auth";
+import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
+import { authOptions } from "@/lib/auth-options";
 import Navbar from "@/components/Navbar";
 import Hero from "@/components/Hero";
 import Profile from "@/components/Profile";
 
 export default async function Home() {
-  const session = await auth();
+  const session = await getServerSession(authOptions);
 
   if (!session) {
-    redirect("/login");
+    redirect("/api/auth/signin/keycloak");
   }
 
   return (
