@@ -39,7 +39,6 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       ...token,
       accessToken: refreshed.access_token,
       refreshToken: refreshed.refresh_token ?? token.refreshToken,
-      idToken: refreshed.id_token,
       expiresAt: Math.floor(Date.now() / 1000) + refreshed.expires_in,
     };
   } catch {
@@ -64,7 +63,6 @@ export const authOptions: AuthOptions = {
           ...token,
           accessToken: account.access_token,
           refreshToken: account.refresh_token,
-          idToken: account.id_token,
           expiresAt: account.expires_at,
           preferred_username: keycloakProfile.preferred_username,
           given_name: keycloakProfile.given_name,
@@ -88,7 +86,6 @@ export const authOptions: AuthOptions = {
     async session({ session, token }) {
       session.accessToken = token.accessToken ?? "";
       session.refreshToken = token.refreshToken ?? "";
-      session.idToken = token.idToken ?? "";
       session.roles = token.roles ?? [];
       session.username = token.preferred_username ?? "";
       session.firstName = token.given_name ?? "";
