@@ -18,14 +18,14 @@ interface KeycloakProfile {
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
     const response = await fetch(
-      `${process.env.AUTH_KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
+      `${process.env.KEYCLOAK_ISSUER}/protocol/openid-connect/token`,
       {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({
           grant_type: "refresh_token",
-          client_id: process.env.AUTH_KEYCLOAK_ID!,
-          client_secret: process.env.AUTH_KEYCLOAK_SECRET!,
+          client_id: process.env.KEYCLOAK_CLIENT_ID!,
+          client_secret: process.env.KEYCLOAK_CLIENT_SECRET!,
           refresh_token: token.refreshToken ?? "",
         }),
       }
@@ -50,9 +50,9 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
 export const authOptions: AuthOptions = {
   providers: [
     KeycloakProvider({
-      clientId: process.env.AUTH_KEYCLOAK_ID!,
-      clientSecret: process.env.AUTH_KEYCLOAK_SECRET!,
-      issuer: process.env.AUTH_KEYCLOAK_ISSUER!,
+      clientId: process.env.KEYCLOAK_CLIENT_ID!,
+      clientSecret: process.env.KEYCLOAK_CLIENT_SECRET!,
+      issuer: process.env.KEYCLOAK_ISSUER!,
     }),
   ],
   callbacks: {
