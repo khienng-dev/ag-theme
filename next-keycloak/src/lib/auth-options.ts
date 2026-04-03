@@ -104,4 +104,5 @@ export const authOptions: AuthOptions = {
       return session;
     },
   },
+  debug: true,
 };
