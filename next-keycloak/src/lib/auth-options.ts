@@ -85,7 +85,6 @@ export const authOptions: AuthOptions = {
 
     async session({ session, token }) {
       session.accessToken = token.accessToken ?? "";
-      session.refreshToken = token.refreshToken ?? "";
       session.roles = token.roles ?? [];
       session.username = token.preferred_username ?? "";
       session.firstName = token.given_name ?? "";
